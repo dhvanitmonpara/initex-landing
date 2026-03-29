@@ -46,7 +46,7 @@ export default function Navbar() {
           ))}
         </div>
 
-        <MagneticButton variant="primary" className="hidden sm:flex px-4 py-2 md:px-6 md:py-3 text-xs md:text-sm">
+        <MagneticButton onClick={() => window.open("https://npmjs.com/package/initex", "_blank")} variant="primary" className="hidden sm:flex px-4 py-2 md:px-6 md:py-3 text-xs md:text-sm">
           npx initex
         </MagneticButton>
       </nav>

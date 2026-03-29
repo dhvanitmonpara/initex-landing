@@ -48,7 +48,7 @@ export default function Hero() {
         </p>
 
         <div className="hero-text mt-6 md:mt-8 flex flex-col sm:flex-row gap-4 sm:items-center w-full sm:w-auto">
-          <MagneticButton variant="primary" className="bg-matrix text-carbon px-6 py-3 md:px-8 md:py-4 text-base md:text-lg w-full sm:w-auto">
+          <MagneticButton onClick={() => window.open("https://npmjs.com/package/initex", "_blank")} variant="primary" className="bg-matrix text-carbon px-6 py-3 md:px-8 md:py-4 text-base md:text-lg w-full sm:w-auto">
             Scaffold Your Backend <ChevronRight size={20} className="ml-2" />
           </MagneticButton>
           <div className="flex flex-col text-[10px] md:text-xs font-data text-silver/50 uppercase tracking-widest border-l-2 border-white/10 pl-4 py-1">

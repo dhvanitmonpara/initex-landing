@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
+import DemoVideo from "./components/DemoVideo";
 import Features from "./components/Features";
 import Philosophy from "./components/Philosophy";
 import Protocol from "./components/Protocol";
@@ -24,6 +25,7 @@ export default function App() {
       <Navbar />
       <main>
         <Hero />
+        <DemoVideo videoUrl="https://youtu.be/VbBP5RlmFJs" />
         <Features />
         <Philosophy />
         <Protocol />
