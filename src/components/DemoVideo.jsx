@@ -239,38 +239,15 @@ const VideoControls = ({ videoRef, containerRef }) => {
 
 // ─── Main DemoVideo Component ──────────────────────────────────────────────────
 const DemoVideo = ({ videoUrl }) => {
-  const [hasTriggered, setHasTriggered] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isActive, setIsActive] = useState(false); // controlled by IntersectionObserver
+  const [ytSrc, setYtSrc] = useState('');      // YouTube: swap autoplay on trigger
   const sectionRef = useRef(null);
   const videoRef = useRef(null);
   const containerRef = useRef(null);
 
-  // ── Intersection Observer ────────────────────────────────────────────────────
-  useEffect(() => {
-    const node = sectionRef.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !hasTriggered) {
-          setHasTriggered(true);
-          setIsLoading(true);
-          observer.disconnect();
-          setTimeout(() => {
-            setIsLoading(false);
-            setIsPlaying(true);
-          }, 800);
-        }
-      },
-      { threshold: 0, rootMargin: '0px 0px -10% 0px' }
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [hasTriggered]);
-
   const isYouTube = (url) => url && (url.includes('youtube.com') || url.includes('youtu.be'));
 
-  const getYouTubeEmbedUrl = (url) => {
+  const buildYouTubeUrl = (url, autoplay) => {
     if (!url) return '';
     let videoId = '';
     try {
@@ -278,14 +255,45 @@ const DemoVideo = ({ videoUrl }) => {
       else if (url.includes('youtube.com/watch')) videoId = new URL(url).searchParams.get('v');
       else if (url.includes('youtube.com/embed/')) videoId = url.split('youtube.com/embed/')[1].split('?')[0];
     } catch (e) { console.error('Invalid YouTube URL'); }
-    // For YouTube: use native controls (we can't inject custom UI into cross-origin iframes)
-    return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1&rel=0&modestbranding=1&color=white`;
+    const ap = autoplay ? 1 : 0;
+    return `https://www.youtube.com/embed/${videoId}?autoplay=${ap}&mute=1&loop=1&playlist=${videoId}&controls=1&rel=0&modestbranding=1`;
   };
+
+  // ── Set initial YouTube src for pre-loading on mount ────────────────────────
+  useEffect(() => {
+    if (isYouTube(videoUrl)) {
+      setYtSrc(buildYouTubeUrl(videoUrl, false)); // autoplay=0 — preloads page/connection
+    }
+  }, [videoUrl]);
+
+  // ── IntersectionObserver — play on scroll ────────────────────────────────────
+  useEffect(() => {
+    const node = sectionRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsActive(true);
+          observer.disconnect();
+          if (isYouTube(videoUrl)) {
+            // Swap src to autoplay=1 — video data already partially fetched
+            setYtSrc(buildYouTubeUrl(videoUrl, true));
+          } else {
+            // MP4 was preloaded via preload="auto"; just call play()
+            videoRef.current?.play().catch(() => { });
+          }
+        }
+      },
+      { threshold: 0, rootMargin: '0px 0px -10% 0px' }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [videoUrl]);
 
   return (
     <section
       ref={sectionRef}
-      className="relative w-full py-16 md:py-24 px-6 lg:px-12 flex justify-center items-center z-10"
+      className="relative w-full sm:pt-16 sm:pb-8 md:pt-24 md:pb-20 px-6 lg:px-12 flex justify-center items-center z-10"
     >
       {/* Ambient glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl h-64 bg-matrix/5 blur-[120px] rounded-full pointer-events-none" />
@@ -294,62 +302,46 @@ const DemoVideo = ({ videoUrl }) => {
         ref={containerRef}
         className="relative w-full max-w-5xl rounded-[1.5rem] md:rounded-[2rem] overflow-hidden bg-black aspect-video border border-white/5 hover:border-matrix/20 hover:shadow-[0_0_4rem_rgba(0,255,65,0.06)] shadow-2xl transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
       >
-        {/* Idle */}
-        {!hasTriggered && (
-          <div className="absolute inset-0 bg-[#030303] z-20 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-4 text-white/10 font-mono text-[11px] tracking-[0.3em]">
-              <div className="w-32 h-[1px] bg-white/5" />
-              <span>STANDBY</span>
-            </div>
+        {/* ── Standby overlay — fades out when active ── */}
+        <div
+          className="absolute inset-0 z-20 flex items-center justify-center bg-[#030303] transition-opacity duration-700"
+          style={{ opacity: isActive ? 0 : 1, pointerEvents: isActive ? 'none' : 'auto' }}
+        >
+          <div className="flex flex-col items-center gap-4 text-white/10 font-mono text-[11px] tracking-[0.3em]">
+            <div className="w-32 h-[1px] bg-white/5" />
+            <span>STANDBY</span>
           </div>
+        </div>
+
+        {/* ── YouTube iframe — pre-loaded on mount, autoplay swapped on scroll ── */}
+        {isYouTube(videoUrl) && ytSrc && (
+          <iframe
+            src={ytSrc}
+            className="absolute inset-0 w-full h-full border-0 bg-black"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            title="Demo Video"
+            allowFullScreen
+          />
         )}
 
-        {/* Boot loader */}
-        {isLoading && (
-          <div className="absolute inset-0 bg-[#030303] z-20 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-4 font-mono text-[11px] tracking-[0.3em]" style={{ color: 'rgba(0,255,65,0.6)' }}>
-              <div className="relative w-32 h-[1px] bg-white/10 overflow-hidden">
-                <div className="absolute top-0 left-0 h-full w-1/3 animate-pulse" style={{ background: '#00FF41' }} />
-              </div>
-              <span className="animate-pulse">BOOTING...</span>
-            </div>
-          </div>
+        {/* ── MP4 video — preloaded silently on mount, played on scroll ── */}
+        {!isYouTube(videoUrl) && videoUrl && (
+          <video
+            ref={videoRef}
+            src={videoUrl}
+            preload="auto"
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover bg-black outline-none"
+          />
         )}
 
-        {/* Video / iframe */}
-        {isPlaying && (
-          <div className="absolute inset-0 z-10" style={{ animation: 'fadeIn 0.8s ease forwards' }}>
-            {isYouTube(videoUrl) ? (
-              <iframe
-                src={getYouTubeEmbedUrl(videoUrl)}
-                className="w-full h-full border-0 bg-black"
-                allow="autoplay; encrypted-media; picture-in-picture"
-                title="Demo Video"
-                allowFullScreen
-              />
-            ) : (
-              <video
-                ref={videoRef}
-                src={videoUrl}
-                autoPlay
-                muted
-                loop
-                playsInline
-                className="w-full h-full object-cover bg-black outline-none"
-              />
-            )}
-          </div>
-        )}
-
-        {/* Custom controls — MP4 only (YouTube uses its own native controls) */}
-        {isPlaying && !isYouTube(videoUrl) && (
+        {/* ── Custom controls — MP4 only ── */}
+        {isActive && !isYouTube(videoUrl) && (
           <VideoControls videoRef={videoRef} containerRef={containerRef} />
         )}
       </div>
-
-      <style>{`
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-      `}</style>
     </section>
   );
 };
