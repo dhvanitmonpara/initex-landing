@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -62,19 +64,33 @@ const DiagnosticShuffler = () => {
 const TelemetryTypewriter = () => {
   const [text, setText] = useState("");
   const fullText = "SAVE preset.yaml\\nINJECT config -> initex.js\\nDEPLOY target [production]\\nSUCCESS.";
-  
+
   useEffect(() => {
-    let i = 0;
-    const interval = setInterval(() => {
-      setText(fullText.slice(0, i));
-      i++;
-      if (i > fullText.length) {
-        clearInterval(interval);
-        setTimeout(() => { i = 0; setInterval(); }, 5000); // simplify loop
+    let timeoutId;
+    let cancelled = false;
+
+    const runLoop = (index = 0) => {
+      if (cancelled) {
+        return;
       }
-    }, 50);
-    return () => clearInterval(interval);
-  }, []);
+
+      setText(fullText.slice(0, index));
+
+      if (index <= fullText.length) {
+        timeoutId = window.setTimeout(() => runLoop(index + 1), 50);
+        return;
+      }
+
+      timeoutId = window.setTimeout(() => runLoop(0), 5000);
+    };
+
+    runLoop();
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [fullText]);
 
   return (
     <div className="bg-lead border border-silver/10 rounded-[2rem] p-8 h-[400px] flex flex-col justify-between shadow-2xl">

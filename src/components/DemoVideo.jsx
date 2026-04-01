@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 // ─── Inline SVG Icons (no extra deps) ─────────────────────────────────────────

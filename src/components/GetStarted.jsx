@@ -1,6 +1,8 @@
-import React, { useState } from "react";
-import MagneticButton from "./MagneticButton";
+"use client";
+
 import { Terminal } from "lucide-react";
+import { useState } from "react";
+import MagneticButton from "./MagneticButton";
 
 export default function GetStarted() {
   const [copied, setCopied] = useState(false);
